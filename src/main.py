@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from neural import NeuralNetwork
+import neural
+import sys
 
 
 NUM_HANDS = 10
@@ -89,14 +90,14 @@ def main():
     X, Y = load_data('train.csv')
     X_train, Y_train, X_test, Y_test = split_data(X, Y)
 
-    nn = NeuralNetwork(hidden_neurons=70)
+    nn = neural.NeuralNetwork(hidden_neurons=70)
     nn.train(X_train, Y_train, X_test=X_test,
              Y_test=Y_test, batch_size=40, learning_rate=0.1, num_epochs=75, learning_rate_decay=False)
 
-    # X_submit = load_test('test.csv')
-    # np.save("X_submit.npy", X_submit)
+    X_submit = load_test('test.csv')
+    np.save("X_submit.npy", X_submit)
 
-    X_submit = np.load("X_submit.npy")
+    # X_submit = np.load("X_submit.npy")
 
     predictions = nn.decision_function(X_submit).argmax(axis=0)
     indices = np.arange(len(predictions)) + 1
