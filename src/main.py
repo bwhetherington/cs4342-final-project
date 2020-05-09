@@ -109,18 +109,42 @@ def augment(X, Y):
 
     return X_aug, Y_aug
 
+def make_data_2d(X):
+    return np.reshape(X, (X.shape[0], 5, 17, 1))
+
+def get_model(name: str):
+    if name == 'dense':
+        return keras.Sequential([
+            layers.InputLayer(input_shape=(85,)),
+            layers.Dense(70, name='hidden1', activation='relu'),
+            layers.Dense(60, name='hidden2', activation='relu'),
+            layers.Dense(30, name='hidden3', activation='relu'),
+            layers.Dense(10, name='output', activation='softmax')
+        ], 'poker_predictor')
+
+    if name == 'conv':
+        return keras.Sequential([
+            layers.InputLayer(input_shape=(5, 17, 1)),
+            layers.Conv2D(10, 5, name='conv'),
+            layers.GlobalMaxPooling2D(),
+            layers.Dense(30, name='hidden1', activation='relu'),
+            layers.Dense(30, name='hidden2', activation='relu'),
+            layers.Dense(10, name='output', activation='softmax')
+        ], 'poker_predictor')
 
 def main():
     X, Y = load_data('train.csv')
     X, Y = augment(X, Y)
     X_train, Y_train, X_test, Y_test = split_data(X, Y)
 
-    model = keras.Sequential([
-        layers.Dense(70, name='hidden1', activation='relu', input_shape=(85,)),
-        layers.Dense(60, name='hidden2', activation='relu'),
-        layers.Dense(30, name='hidden3', activation='relu'),
-        layers.Dense(10, name='output', activation='softmax')
-    ], 'poker_predictor')
+    # change this to test different models
+    model_id = 'conv'
+
+    if model_id == 'conv':
+        X_train = make_data_2d(X_train)
+        X_test = make_data_2d(X_test)
+
+    model = get_model(model_id)
 
     model.summary()
 
@@ -136,7 +160,7 @@ def main():
         x=X_train,
         y=Y_train,
         batch_size=40,
-        epochs=50,
+        epochs=10,
         validation_data=(X_test, Y_test)
     )
     model.save_weights('model.h5')
@@ -150,13 +174,13 @@ def main():
     # X_submit = load_test('test.csv')
     # np.save("X_submit.npy", X_submit)
 
-    X_submit = np.load("X_submit.npy")
+    # X_submit = np.load("X_submit.npy")
 
-    predictions = np.array(model.predict(X_submit)).argmax(axis=1)
-    indices = np.arange(len(predictions)) + 1
-    data = np.vstack((indices, predictions)).T
-    d = pd.DataFrame(data=data, columns=["id", "hand"])
-    d.to_csv('submission.csv', mode='w', index=False)
+    # predictions = np.array(model.predict(X_submit)).argmax(axis=1)
+    # indices = np.arange(len(predictions)) + 1
+    # data = np.vstack((indices, predictions)).T
+    # d = pd.DataFrame(data=data, columns=["id", "hand"])
+    # d.to_csv('submission.csv', mode='w', index=False)
 
 
 if __name__ == '__main__':
