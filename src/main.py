@@ -92,6 +92,7 @@ def split_data(X, Y):
 
 
 def oversample(X, Y):
+    # augments data proportional to rarity of label
     n, m = X.shape
 
     hand_distr = np.sum(Y, axis=0)
@@ -169,7 +170,7 @@ def main():
     X, Y = augment(X, Y)
     # X, Y = oversample(X, Y)
     X_train, Y_train, X_test, Y_test = split_data(X, Y)
-    X_train, Y_train = oversample(X_train, Y_train)
+    # X_train, Y_train = oversample(X_train, Y_train)
 
     # change this to test different models
     model_id = 'conv'
@@ -194,7 +195,7 @@ def main():
         x=X_train,
         y=Y_train,
         batch_size=40,
-        epochs=10,
+        epochs=20,
         validation_data=(X_test, Y_test)
     )
     model.save_weights(f'model.h5')

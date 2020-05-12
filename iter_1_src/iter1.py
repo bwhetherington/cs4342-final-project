@@ -6,10 +6,14 @@ import pandas as pd
 
 NUM_HANDS = 10
 
-def shuffle_pairwise(a, b):
-    '''Returns a pair of shuffled copies of the given arrays, shuffled in the same way.'''
-    p = np.random.permutation(len(a))
-    return a[p], b[p]
+card_size = 4 + 13
+
+def load_data(file):
+    d = pd.read_csv(file)
+    # print(d)
+    y = prepare_y(np.array(d.hand))        # Labels
+    X = one_hot(np.array(d.iloc[:, :10]))  # Features
+    return X, y
 
 def prepare_y(hands):
     n = len(hands)
@@ -18,6 +22,42 @@ def prepare_y(hands):
         y[i][hand] = 1
     return y
     # return hands 
+
+def one_hot(X):
+    """
+    One hot encode the input data
+    """
+    # Reshape Y
+    n = len(X)
+    hands = X.reshape((n, 5, 2))
+
+    out = np.zeros((n, 5 * (4 + 13)))
+
+    for i, hand in zip(range(len(hands)), hands):
+        for j, card in zip(range(len(hand)), hand):
+            suit_slots = np.zeros(4)
+            value_slots = np.zeros(13)
+
+            suit, value = card - 1
+
+            suit_slots[suit] = 1
+            value_slots[value] = 1
+
+            set_one_card(out[i], j, (suit_slots, value_slots))
+
+    return out
+
+def load_test(file):
+    d = pd.read_csv(file)
+    X = np.array(d.iloc[:, 1:])
+    return one_hot(X)
+
+def set_one_card(out, index, data):
+    suit, value = data
+    start = card_size * index
+    end = start + card_size
+    out[start:start + 4] = suit
+    out[start + 4:end] = value
 
 def split_data(X, Y):
     n = len(X)
@@ -28,12 +68,10 @@ def split_data(X, Y):
     Y_test = Y[mid:]
     return X_train, Y_train, X_test, Y_test
 
-def load_data(file):
-    d = pd.read_csv(file)
-    # print(d)
-    y = prepare_y(np.array(d.hand))        # Labels
-    X = one_hot(np.array(d.iloc[:, :10]))  # Features
-    return X, y
+def shuffle_pairwise(a, b):
+    '''Returns a pair of shuffled copies of the given arrays, shuffled in the same way.'''
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
 
 def get_predictions(W, images):
     # images: _x785
@@ -59,7 +97,6 @@ def train_epoch_SGD(W, trainingImages, trainingLabels, epsilon, batchSize):
         predictions = get_predictions(W, images)
         W -= get_gradient_CE(images, predictions, labels) * epsilon
     return W
-
 
 # Given training and testing data, learning rate epsilon, and a specified batch size,
 # conduct stochastic gradient descent (SGD) to optimize the weight matrix W (785x10).
@@ -89,52 +126,13 @@ def fCE(W, images, labels):
     predictions = get_predictions(W, images)
     return -np.sum(labels * np.log(predictions)) / n
 
-card_size = 4 + 13
-
-def load_test(file):
-    d = pd.read_csv(file)
-    X = np.array(d.iloc[:, 1:])
-    return one_hot(X)
-
-def one_hot(X):
-    """
-    One hot encode the input data
-    """
-    # Reshape Y
-    n = len(X)
-    hands = X.reshape((n, 5, 2))
-
-    out = np.zeros((n, 5 * (4 + 13)))
-
-    for i, hand in zip(range(len(hands)), hands):
-        for j, card in zip(range(len(hand)), hand):
-            suit_slots = np.zeros(4)
-            value_slots = np.zeros(13)
-
-            suit, value = card - 1
-
-            suit_slots[suit] = 1
-            value_slots[value] = 1
-
-            set_one_card(out[i], j, (suit_slots, value_slots))
-
-    return out
-
-def set_one_card(out, index, data):
-    suit, value = data
-    start = card_size * index
-    end = start + card_size
-    out[start:start + 4] = suit
-    out[start + 4:end] = value
 
 if __name__ == "__main__":
     # Load data
     X, Y = load_data('train.csv')
     trainingImages, trainingLabels, testingImages, testingLabels = split_data(X,Y)
-    print(Y.shape)
     # shuffle data
     trainingImages, trainingLabels = shuffle_pairwise(trainingImages, trainingLabels)
-
     # Append a constant 1 term to each example to correspond to the bias terms
     trainingImages = appendOnes(trainingImages)
     testingImages = appendOnes(testingImages)
@@ -146,10 +144,10 @@ if __name__ == "__main__":
 
     T = load_test('test.csv')
     T = appendOnes(T)
-    predictions = get_predictions(W, T)
-    np.savetxt("resp1.csv", predictions, fmt = '%d', header = 'id,hand', comments = '', delimiter=",")
-    print('Time to train: %.2f seconds' % (stop - start).total_seconds())
+    predictions = np.array([np.argmax(x) for x in get_predictions(W, T)]).T
+    print(predictions.shape)
+    indices = np.arange(predictions.shape[0]) + 1
+    data = np.vstack((indices, predictions.T)).T
+    d = pd.DataFrame(data=data, columns=["id", "hand"])
+    d.to_csv('submission.csv', mode='w', index=False)
 
-    # print fCE and fPC
-    print(f"Test accuracy (PC): {fPC(W, testingImages, testingLabels)}")
-    print(f"Test loss (CE): {fCE(W, testingImages, testingLabels)}")
