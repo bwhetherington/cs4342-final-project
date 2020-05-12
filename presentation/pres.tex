@@ -1,0 +1,50 @@
+\documentclass{beamer}
+\usetheme{Boadilla}
+
+\usepackage{hhline}
+
+\title{Poker Hand Induction}
+\author{Kyle Dituro, Ben Hetherington, James McClung}
+\date{\today}
+
+\begin{document}
+    
+    \begin{frame}
+        \titlepage
+    \end{frame}
+
+    \begin{frame}[c]\frametitle{Problem:}
+        \begin{itemize}
+            \item Given 5 playing cards, what poker hand do they represent?
+            \item Data given in the form $<r_1, s_1, r_2, s_2, \dots, r_5, s_5>$
+            \begin{itemize}
+                \item $r_n$ is the value of the $n^{\text{th}}$ card in the hand
+                \item $s_n$ is the suit of the $n^{\text{th}}$ card in the hand
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[c]\frametitle{Methods:}  
+            \begin{itemize}
+                \item Random Guessing
+                \item Softmax Linear Regression
+                \item Dense Neural Network
+                \item Convolutional Neural Network
+            \end{itemize}
+    \end{frame}
+
+    \begin{frame}[c]\frametitle{Results:}
+        \begin{center}
+            \begin{tabular}{|c|c|}
+                \hline
+                Model & Test PC 
+                \\\hline
+                Random Guessing & 0.34535 \\
+                Linear Regression & 0.48528 \\
+                Dense NN & \\
+                Convolutional NN & \\
+                \hline 
+            \end{tabular}
+        \end{center}
+    \end{frame}
+\end{document}
