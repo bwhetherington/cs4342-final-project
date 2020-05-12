@@ -90,8 +90,39 @@ def split_data(X, Y):
     return X_train, Y_train, X_test, Y_test
 
 
+
+def oversample(X, Y):
+    n, m = X.shape
+
+    hand_distr = np.sum(Y, axis=0)
+    resample_count = np.minimum(n/hand_distr, 60)
+    new_n = int(np.sum(hand_distr * resample_count))
+
+    X_oaug = np.zeros((new_n, m))
+    Y_oaug = np.zeros((new_n, 10))
+
+    start = 0
+    for x, y in zip(X, Y):
+        label = np.where(y==1)
+        resamples = int(resample_count[label])
+
+        Y_oaug[start:start + resamples] = y
+        for j in range(resamples):
+            x_oaug = np.copy(x).reshape((5, 17))
+            np.random.shuffle(x_oaug)
+            X_oaug[start + j] = x_oaug.flatten()
+        
+        start +=  resamples
+    
+    print(np.sum(Y_oaug, axis=0))
+
+    return X_oaug, Y_oaug
+
+
+
+
 def augment(X, Y):
-    resamples = 10
+    resamples = 5
     n, f = X.shape
 
     # We will include 3 shuffled versions of each hand for each hand in the input data
@@ -111,6 +142,7 @@ def augment(X, Y):
 
 def make_data_2d(X):
     return np.reshape(X, (X.shape[0], 5, 17, 1))
+    
 
 def get_model(name: str):
     if name == 'dense':
@@ -125,17 +157,19 @@ def get_model(name: str):
     if name == 'conv':
         return keras.Sequential([
             layers.InputLayer(input_shape=(5, 17, 1)),
-            layers.Conv2D(10, 5, name='conv'),
+            layers.Conv2D(10, (5, 5), name='conv'),
             layers.GlobalMaxPooling2D(),
-            layers.Dense(30, name='hidden1', activation='relu'),
-            layers.Dense(30, name='hidden2', activation='relu'),
+            layers.Dense(20, name='hidden1', activation='relu'),
+            layers.Dense(20, name='hidden2', activation='relu'),
             layers.Dense(10, name='output', activation='softmax')
         ], 'poker_predictor')
 
 def main():
     X, Y = load_data('train.csv')
     X, Y = augment(X, Y)
+    # X, Y = oversample(X, Y)
     X_train, Y_train, X_test, Y_test = split_data(X, Y)
+    X_train, Y_train = oversample(X_train, Y_train)
 
     # change this to test different models
     model_id = 'conv'
@@ -163,24 +197,25 @@ def main():
         epochs=10,
         validation_data=(X_test, Y_test)
     )
-    model.save_weights('model.h5')
+    model.save_weights(f'model.h5')
 
-    # model.load_weights('model.h5')
+    # model.load_weights('model-conv-5x5-20.h5')
 
     # nn = neural.NeuralNetwork(hidden_neurons=70)
     # nn.train(X_train, Y_train, X_test=X_test,
     #          Y_test=Y_test, batch_size=40, learning_rate=0.1, num_epochs=75, learning_rate_decay=False)
 
-    # X_submit = load_test('test.csv')
+    X_submit = load_test('test.csv')
     # np.save("X_submit.npy", X_submit)
 
     # X_submit = np.load("X_submit.npy")
 
     # predictions = np.array(model.predict(X_submit)).argmax(axis=1)
-    # indices = np.arange(len(predictions)) + 1
-    # data = np.vstack((indices, predictions)).T
-    # d = pd.DataFrame(data=data, columns=["id", "hand"])
-    # d.to_csv('submission.csv', mode='w', index=False)
+    predictions = np.array(model.predict(make_data_2d(X_submit))).argmax(axis=1)
+    indices = np.arange(len(predictions)) + 1
+    data = np.vstack((indices, predictions)).T
+    d = pd.DataFrame(data=data, columns=["id", "hand"])
+    d.to_csv('submission.csv', mode='w', index=False)
 
 
 if __name__ == '__main__':
